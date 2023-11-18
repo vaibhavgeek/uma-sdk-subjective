@@ -49,7 +49,7 @@ contract UMASubjectiveSDK is OptimisticOracleV3CallbackRecipientInterface {
     bytes public constant unresolvable = "Unresolvable"; // Name of the unresolvable outcome where payouts are split.
 
     event contentInitialized(
-        bytes32 indexed marketId,
+        bytes32 indexed contentId,
         string outcome1,
         string outcome2,
         string criteria,
@@ -156,20 +156,22 @@ contract UMASubjectiveSDK is OptimisticOracleV3CallbackRecipientInterface {
             content.valueTreshold = content.valueTreshold + 1;
         }
 
-        content.assertedOutcomeId = assertedOutcomeId;
-        uint256 minimumBond = oo.getMinimumBond(address(currency)); // OOv3 might require higher bond.
-        uint256 bond = content.requiredBond > minimumBond ? content.requiredBond : minimumBond;
-        bytes memory claim = _composeClaim(assertedOutcome, content.criteria);
+        if(content.valueTreshold > content.assertTreshold){
+            content.assertedOutcomeId = assertedOutcomeId;
+            uint256 minimumBond = oo.getMinimumBond(address(currency)); // OOv3 might require higher bond.
+            uint256 bond = content.requiredBond > minimumBond ? content.requiredBond : minimumBond;
+            bytes memory claim = _composeClaim(assertedOutcome, content.criteria);
 
-        // Pull bond and make the assertion.
-        currency.safeTransferFrom(msg.sender, address(this), bond);
-        currency.safeApprove(address(oo), bond);
-        assertionId = _assertTruthWithDefaults(claim, bond);
+            // Pull bond and make the assertion.
+            currency.safeTransferFrom(msg.sender, address(this), bond);
+            currency.safeApprove(address(oo), bond);
+            assertionId = _assertTruthWithDefaults(claim, bond);
 
-        // Store the asserter and contentId for the assertionResolvedCallback.
-        asserts[assertionId] = assertedContent({ asserter: msg.sender, contentId: contentId });
+            // Store the asserter and contentId for the assertionResolvedCallback.
+            asserts[assertionId] = assertedContent({ asserter: msg.sender, contentId: contentId });
 
-        emit contentAsserted(contentId, assertedOutcome, assertionId);
+            emit contentAsserted(contentId, assertedOutcome, assertionId);
+        }
     }
 
     // Callback from settled assertion.

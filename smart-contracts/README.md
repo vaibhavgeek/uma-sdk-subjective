@@ -1,3 +1,67 @@
+### What does initializeContent do?
+
+Initalize Content is to be called by content creator (poster of the content), these are the values it takes. 
+
+```
+struct Content {
+        bool resolved; // True if the content is in line with the criteria posted.
+        bytes32 assertedOutcomeId; // Hash of asserted outcome (outcome1, outcome2 or unresolvable).
+        ExpandedIERC20 outcome1Token; // ERC20 token representing the value of default Negation (Criteria)
+        ExpandedIERC20 outcome2Token; // ERC20 token representing the value of default Tautology (Criteria)
+        uint256 reward; // Reward available for voting right.
+        uint256 requiredBond; // Expected bond to ensure criteria by poster.
+        bytes outcome1; // Short name of the first outcome.
+        bytes outcome2; // Short name of the second outcome.
+        bytes criteria; // Criteria of the content.
+        uint256 assertTreshold; // The treshold for the assertion. 
+        uint256 valueTreshold; // Current value of Negation(Criteria)
+    }
+
+```
+
+### What does assertContent do?
+Any user can assertContent if they think it matches the criteria or not. They go for outcome1Token if they think
+it does not matches the criteria. This increases valueTreshold by 1. If the assertContent increases by pre defined treshold, this gets escalated to the UMA holders for resolution, where they settleclaim and reward parties apporpiately. 
+
+```
+function assertContent(bytes32 contentId, string memory assertedOutcome) public returns (bytes32 assertionId) {
+        Content storage content = contents[contentId];
+        require(content.outcome1Token != ExpandedIERC20(address(0)), "Content does not exist");
+        bytes32 assertedOutcomeId = keccak256(bytes(assertedOutcome));
+        require(content.assertedOutcomeId == bytes32(0), "Assertion active or resolved");
+        require(
+            assertedOutcomeId == keccak256(content.outcome1) ||
+                assertedOutcomeId == keccak256(content.outcome2) ||
+                assertedOutcomeId == keccak256(unresolvable),
+            "Invalid asserted outcome"
+        );
+        // Increase Counter for Treshold if asserted as OutCome1, Outcome1 is default for Negation of  
+        // what criteria is being proposed
+        if(assertedOutcomeId  == keccak256(content.outcome1)){
+            content.valueTreshold = content.valueTreshold + 1;
+        }
+
+        if(content.valueTreshold > content.assertTreshold){
+            content.assertedOutcomeId = assertedOutcomeId;
+            uint256 minimumBond = oo.getMinimumBond(address(currency)); // OOv3 might require higher bond.
+            uint256 bond = content.requiredBond > minimumBond ? content.requiredBond : minimumBond;
+            bytes memory claim = _composeClaim(assertedOutcome, content.criteria);
+
+            // Pull bond and make the assertion.
+            currency.safeTransferFrom(msg.sender, address(this), bond);
+            currency.safeApprove(address(oo), bond);
+            assertionId = _assertTruthWithDefaults(claim, bond);
+
+            // Store the asserter and contentId for the assertionResolvedCallback.
+            asserts[assertionId] = assertedContent({ asserter: msg.sender, contentId: contentId });
+
+            emit contentAsserted(contentId, assertedOutcome, assertionId);
+        }
+    }
+```
+
+
+
 # Quickstart for Integrating with UMA Optimistic Oracle V3
 <a href="https://docs.uma.xyz/developers/optimistic-oracle"><img alt="OO" src="https://miro.medium.com/v2/resize:fit:1400/1*hLSl9M87P80A1pZ9vuTvyA.gif" width=600></a>
 
@@ -39,14 +103,6 @@ Compile the contracts with:
 
 ```bash
 forge build
-```
-
-### Run the tests 🧪
-
-Test the example contracts with:
-
-```bash
-forge test
 ```
 
 ## Sandboxed Optimistic Oracle environment 🚀
