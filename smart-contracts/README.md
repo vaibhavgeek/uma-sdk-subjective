@@ -67,85 +67,104 @@ function assertContent(bytes32 contentId, string memory assertedOutcome) public 
 It checks if the 
 
 
-# Quickstart for Integrating with UMA Optimistic Oracle V3
-<a href="https://docs.uma.xyz/developers/optimistic-oracle"><img alt="OO" src="https://miro.medium.com/v2/resize:fit:1400/1*hLSl9M87P80A1pZ9vuTvyA.gif" width=600></a>
+### How to fork and deploy
 
-This repository contains example contracts and tests for integrating with the UMA Optimistic Oracle V3.
 
-## Documentation 📚
+### Transaction Hash (Mumbai Testnet)
+Waiting for receipts.
+⠠ [00:00:24] [###########################################] 15/15 receipts (0.0s)
+##### mumbai
+✅  [Success]Hash: 0xc950fd06148e48006e9b4b9b56a57f0043863be8aa6465bd4f244adfca8be1fa
+Contract Address: 0x6193d0673b7Cd6771BC45D5aCfcb3342D0106bD5
+Block: 42563744
+Paid: 0.001341833540938484 ETH (285109 gas * 4.706387876 gwei)
 
-Full documentation on how to build, test, deploy and interact with the example contracts in this repository are
- documented [here](https://docs.uma.xyz/developers/optimistic-oracle).
 
-This project uses [Foundry](https://getfoundry.sh). See the [book](https://book.getfoundry.sh/getting-started/installation.html)
- for instructions on how to install and use Foundry.
+##### mumbai
+✅  [Success]Hash: 0xf033a4be0429118a49c6985faec72a8a13149872b24a409307c98b88857e4d08
+Contract Address: 0x9b0514E47903077E722991c3f70128198EfEC990
+Block: 42563744
+Paid: 0.007345339566667092 ETH (1560717 gas * 4.706387876 gwei)
 
-## Getting Started 👩‍💻
 
-### Install dependencies 👷‍♂️
+##### mumbai
+✅  [Success]Hash: 0x74e21318fc420cd904ac67e5aa4705baf6166b79b6f7fb1bb9845e737651dfe1
+Contract Address: 0x6E80a5855C1e35c340eC9f8eaC823001a47554e6
+Block: 42563744
+Paid: 0.002556872286109652 ETH (543277 gas * 4.706387876 gwei)
 
-On Linux and macOS Foundry toolchain can be installed with:
 
-```bash
-curl -L https://foundry.paradigm.xyz | bash
-foundryup
-```
+##### mumbai
+✅  [Success]Hash: 0xb15d82d3e9bcbda57d8c52c441435fa6b33288d691dbd408d52aa6d34a42a436
+Contract Address: 0x6e8edfc98316663be7a4eA3e049A90D88777D3fD
+Block: 42563744
+Paid: 0.001272969673536852 ETH (270477 gas * 4.706387876 gwei)
 
-In case there was a prior version of Foundry installed, it is advised to update it with `foundryup` command.
 
-Other installation methods are documented [here](https://book.getfoundry.sh/getting-started/installation).
+##### mumbai
+✅  [Success]Hash: 0x6a2f7d70269bf6df8a25ba0391429062e1486db391efaf1d3d511d77424032b9
+Contract Address: 0x995b3AEeE12dCB9AC703746442f9563A38298985
+Block: 42563744
+Paid: 0.00489127832370866 ETH (1039285 gas * 4.706387876 gwei)
 
-Forge manages dependencies using [git submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules) by default, which
- is also the method used in this repository. To install dependencies, run:
 
-```bash
-forge install
-```
+##### mumbai
+✅  [Success]Hash: 0x9eefb0a70ef1d909f672a0b987d164d40bffde89614d35ff7c02c192481f56b6
+Contract Address: 0x88Deee994c937b2d2a9Fa4B3CdB96834471C0471
+Block: 42563744
+Paid: 0.003044943534402356 ETH (646981 gas * 4.706387876 gwei)
 
-### Compile the contracts 🏗
 
-Compile the contracts with:
+##### mumbai
+✅  [Success]Hash: 0x868b15efc70972492337d66dfa95a2e2acd85266f5caec8f637b7b774318d197
+Block: 42563744
+Paid: 0.000225214779030228 ETH (47853 gas * 4.706387876 gwei)
 
-```bash
-forge build
-```
 
-## Sandboxed Optimistic Oracle environment 🚀
+##### mumbai
+✅  [Success]Hash: 0xa44943870a05c7a77314b52dd8bbc7270a99a64d5d4e3094d808868ed2489e21
+Block: 42563744
+Paid: 0.000226005452193396 ETH (48021 gas * 4.706387876 gwei)
 
-In order to experiment with the dispute flow on deployed example contracts, it might be useful to deploy a sandboxed
- Optimistic Oracle environment where dispute resolution is handled by a mock Oracle. This requires exporting following
- environment variables:
-- `ETH_RPC_URL`: URL of the RPC node to use for broadcasting deployment transactions.
-- `MNEMONIC`: Mnemonic of the account to use for deployment.
-- `ETHERSCAN_API_KEY`: API key for Etherscan, used for verifying deployed contracts.
-- `DEFAULT_IDENTIFIER`: Default identifier used by Optimistic Oracle V3 when resolving disputes. If not provided, this
- defaults to `ASSERT_TRUTH` identifier.
-- `DEFAULT_LIVENESS`: Default liveness in seconds used by Optimistic Oracle V3 when settling assertions. If not
- provided, this defaults to `7200` seconds.
-- `DEFAULT_CURRENCY`: Default currency used by Optimistic Oracle V3 when bonding assertions and disputes. If not
- provided, the script would also deploy a mintable ERC20 token and use it as the default currency based on following
- parameters:
-  - `DEFAULT_CURRENCY_NAME`: Name of the new token. If not provided, this defaults to `Default Bond Token`.
-  - `DEFAULT_CURRENCY_SYMBOL`: Symbol of the new token. If not provided, this defaults to `DBT`.
-  - `DEFAULT_CURRENCY_DECIMALS`: Number of decimals of the new token. If not provided, this defaults to `18`.
-- `MINIMUM_BOND`: Minimum bond amount in Wei of default currency required by Optimistic Oracle V3 when accepting new
- assertions. If not provided, this defaults to `100e18` Wei.
 
-The sandboxed environment can be deployed and verified with:
+##### mumbai
+✅  [Success]Hash: 0xe555aeb264d618fa68c9fe5b01a8a76079d1ca058d9a0ae4cb58f229687630f7
+Block: 42563744
+Paid: 0.000226005452193396 ETH (48021 gas * 4.706387876 gwei)
 
-```bash
-forge script \
---broadcast \
---fork-url $ETH_RPC_URL \
---mnemonics "$MNEMONIC" \
---sender $(cast wallet address --mnemonic "$MNEMONIC") \
---verify \
-script/OracleSandbox.s.sol
-```
 
-On other networks than Ethereum the verification might require additional `--verifier-url` parameter with URL of the
- verification API endpoint.
+##### mumbai
+✅  [Success]Hash: 0xba245097b576b788e57a151f02e613f13dec580aa25985b24250956f2108cf60
+Block: 42563744
+Paid: 0.00022527125568474 ETH (47865 gas * 4.706387876 gwei)
 
-At the top of the script output the addresses of the deployed contracts should be logged. These will be required when
- deploying example contracts. Please see the [documentation](https://docs.uma.xyz/developers/optimistic-oracle)
- for more details on how to use this sandboxed environment.
+
+##### mumbai
+✅  [Success]Hash: 0x715084a0906dff56004b0bba4eceb7b876093f3720d5bac544e851ca03e1bdac
+Block: 42563744
+Paid: 0.000436338632759712 ETH (92712 gas * 4.706387876 gwei)
+
+
+##### mumbai
+✅  [Success]Hash: 0x2c225d7ee049c34bd39752407bfbe463122020c97634d323cc76140b45c85beb
+Block: 42563744
+Paid: 0.00022230623132286 ETH (47235 gas * 4.706387876 gwei)
+
+
+##### mumbai
+✅  [Success]Hash: 0xffc663d6eedbccffa08fd111c3a9b44b070b1c632cf4b442035259c3a0fcf0f6
+Block: 42563744
+Paid: 0.000234829929460896 ETH (49896 gas * 4.706387876 gwei)
+
+
+##### mumbai
+✅  [Success]Hash: 0xb47b859438f60d92de6f26bb3dbf30b63dc3f4a75f72e93d8240f7c10929f828
+Contract Address: 0x76E6b6feB4871bF60b3BFcC5AE31fAba444c64BF
+Block: 42563744
+Paid: 0.015125643500834104 ETH (3213854 gas * 4.706387876 gwei)
+
+
+##### mumbai
+✅  [Success]Hash: 0xadb8d8f4fe63b852d240be97d4ac3dd11115a044156913bcc6e3c1b7f23e5ea9
+Block: 42563744
+Paid: 0.000225948975538884 ETH (48009 gas * 4.706387876 gwei)
