@@ -15,6 +15,8 @@ struct Content {
         bytes criteria; // Criteria of the content.
         uint256 assertTreshold; // The treshold for the assertion. 
         uint256 valueTreshold; // Current value of Negation(Criteria)
+        address[] token1yes; // All the people asserted Yes for the token
+        address[] token2yes; // All the people asserted No for the token
     }
 
 ```
@@ -60,6 +62,9 @@ function assertContent(bytes32 contentId, string memory assertedOutcome) public 
     }
 ```
 
+
+### What does assertionResolvedCallback do? 
+It checks if the 
 
 
 # Quickstart for Integrating with UMA Optimistic Oracle V3

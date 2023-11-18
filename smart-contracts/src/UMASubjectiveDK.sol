@@ -30,15 +30,16 @@ contract UMASubjectiveSDK is OptimisticOracleV3CallbackRecipientInterface {
         bytes criteria; // Criteria of the content.
         uint256 assertTreshold; // The treshold for the assertion. 
         uint256 valueTreshold; // Current value of Negation
+        address[] token1yes; // Asserted yes
+        address[] token2yes;  // Asserted No
     }
-
     struct assertedContent {
         address asserter; // Address of the asserter used for reward payout.
         bytes32 contentId; // Identifier for markets mapping.
     }
 
     mapping(bytes32 => Content) public contents; // Maps marketId to Market struct.
-
+    
     mapping(bytes32 => assertedContent) public asserts; // Maps assertionId to AssertedMarket.
 
     FinderInterface public immutable finder; // UMA protocol Finder used to discover other protocol contracts.
@@ -120,7 +121,9 @@ contract UMASubjectiveSDK is OptimisticOracleV3CallbackRecipientInterface {
             outcome2: bytes(outcome2),
             criteria: bytes(criteria),
             assertTreshold: disputeTreshold,
-            valueTreshold: uint256(0)
+            valueTreshold: uint256(0),
+            token1yes: new address[](0), 
+            token2yes: new address[](0)
         });
         if (reward > 0) currency.safeTransferFrom(msg.sender, address(this), reward); // Pull bond from creator.
 
@@ -154,8 +157,12 @@ contract UMASubjectiveSDK is OptimisticOracleV3CallbackRecipientInterface {
         // what criteria is being proposed
         if(assertedOutcomeId  == keccak256(content.outcome1)){
             content.valueTreshold = content.valueTreshold + 1;
+            contents[contentId].token1yes.push(msg.sender);
         }
-
+        else{
+            contents[contentId].token2yes.push(msg.sender);
+        }
+        contents[contentId] = content;
         if(content.valueTreshold > content.assertTreshold){
             content.assertedOutcomeId = assertedOutcomeId;
             uint256 minimumBond = oo.getMinimumBond(address(currency)); // OOv3 might require higher bond.
@@ -175,15 +182,21 @@ contract UMASubjectiveSDK is OptimisticOracleV3CallbackRecipientInterface {
     }
 
     // Callback from settled assertion.
-    // If the assertion was resolved true, then the asserter gets the reward and the market is marked as resolved.
-    // Otherwise, assertedOutcomeId is reset and the market can be asserted again.
+    // If the assertion was resolved true, then the true asserters gets the reward and the market is marked as resolved.
     function assertionResolvedCallback(bytes32 assertionId, bool assertedTruthfully) public {
         require(msg.sender == address(oo), "Not authorized");
         Content storage content = contents[asserts[assertionId].contentId];
 
         if (assertedTruthfully) {
             content.resolved = true;
-            if (content.reward > 0) currency.safeTransfer(asserts[assertionId].asserter, content.reward);
+            if (content.reward > 0) {
+                 uint256 rewardPerRecipient = content.reward / content.token1yes.length;
+                 require(rewardPerRecipient > 0, "Reward too small to distribute");
+                 // Transfer the reward to each recipient
+                 for (uint256 i = 0; i < content.token1yes.length; i++) {
+                    currency.safeTransfer(content.token1yes[i], rewardPerRecipient);
+                    }
+                }
             emit contentResolved(asserts[assertionId].contentId);
         } else content.assertedOutcomeId = bytes32(0);
         delete asserts[assertionId];
