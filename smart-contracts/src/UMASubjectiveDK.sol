@@ -27,17 +27,19 @@ contract UMASubjectiveSDK is OptimisticOracleV3CallbackRecipientInterface {
         uint256 requiredBond; // Expected bond to assert market outcome (OOv3 can require higher bond).
         bytes outcome1; // Short name of the first outcome.
         bytes outcome2; // Short name of the second outcome.
-        bytes description; // Description of the market.
+        bytes criteria; // Criteria of the content.
+        uint256 assertTreshold; // The treshold for the assertion. 
+        uint256 valueTreshold; // Current value of Negation
     }
 
-    struct DisputedContent {
+    struct assertedContent {
         address asserter; // Address of the asserter used for reward payout.
-        bytes32 contendId; // Identifier for markets mapping.
+        bytes32 contentId; // Identifier for markets mapping.
     }
 
     mapping(bytes32 => Content) public contents; // Maps marketId to Market struct.
 
-    mapping(bytes32 => DisputedContent) public disputes; // Maps assertionId to AssertedMarket.
+    mapping(bytes32 => assertedContent) public asserts; // Maps assertionId to AssertedMarket.
 
     FinderInterface public immutable finder; // UMA protocol Finder used to discover other protocol contracts.
     IERC20 public immutable currency; // Currency used for all prediction markets.
@@ -57,7 +59,7 @@ contract UMASubjectiveSDK is OptimisticOracleV3CallbackRecipientInterface {
         uint256 requiredBond,
         uint256 disputeTreshold
     );
-    event contentDisputed(bytes32 indexed marketId, string assertedOutcome, bytes32 indexed assertionId);
+    event contentAsserted(bytes32 indexed marketId, string assertedOutcome, bytes32 indexed assertionId);
     event contentResolved(bytes32 indexed marketId);
     event TokensCreated(bytes32 indexed marketId, address indexed account, uint256 tokensCreated);
     event TokensRedeemed(bytes32 indexed marketId, address indexed account, uint256 tokensRedeemed);
@@ -81,24 +83,24 @@ contract UMASubjectiveSDK is OptimisticOracleV3CallbackRecipientInterface {
         defaultIdentifier = oo.defaultIdentifier();
     }
 
-    function getMarket(bytes32 marketId) public view returns (Market memory) {
-        return markets[marketId];
+    function getMarket(bytes32 marketId) public view returns (Content memory) {
+        return contents[marketId];
     }
 
-    function initializeMarket(
+    function initializeContent(
         string memory outcome1, // Short name of the first outcome.
         string memory outcome2, // Short name of the second outcome.
-        string memory description, // Description of the market.
+        string memory criteria, // Criteria to judge the post.
         uint256 reward, // Reward available for asserting true market outcome.
-        uint256 requiredBond // Expected bond to assert market outcome (OOv3 can require higher bond).
-    ) public returns (bytes32 marketId) {
+        uint256 requiredBond, // Bond from the contentCreator, this is a must. 
+        uint256 disputeTreshold // Expected bond to assert market outcome (OOv3 can require higher bond).
+    ) public returns (bytes32 contentId) {
         require(bytes(outcome1).length > 0, "Empty first outcome");
         require(bytes(outcome2).length > 0, "Empty second outcome");
         require(keccak256(bytes(outcome1)) != keccak256(bytes(outcome2)), "Outcomes are the same");
-        require(bytes(description).length > 0, "Empty description");
-        marketId = keccak256(abi.encode(block.number, description));
-        require(markets[marketId].outcome1Token == ExpandedIERC20(address(0)), "Market already exists");
-
+        require(bytes(criteria).length > 0, "Empty description");
+        contentId = keccak256(abi.encode(block.number, criteria));
+        require(contents[contentId].outcome1Token == ExpandedIERC20(address(0)), "Market already exists");
         // Create position tokens with this contract having minter and burner roles.
         ExpandedIERC20 outcome1Token = new ExpandedERC20(string(abi.encodePacked(outcome1, " Token")), "O1T", 18);
         ExpandedIERC20 outcome2Token = new ExpandedERC20(string(abi.encodePacked(outcome2, " Token")), "O2T", 18);
@@ -107,7 +109,7 @@ contract UMASubjectiveSDK is OptimisticOracleV3CallbackRecipientInterface {
         outcome1Token.addBurner(address(this));
         outcome2Token.addBurner(address(this));
 
-        markets[marketId] = Market({
+        contents[contentId] = Content({
             resolved: false,
             assertedOutcomeId: bytes32(0),
             outcome1Token: outcome1Token,
@@ -116,50 +118,58 @@ contract UMASubjectiveSDK is OptimisticOracleV3CallbackRecipientInterface {
             requiredBond: requiredBond,
             outcome1: bytes(outcome1),
             outcome2: bytes(outcome2),
-            description: bytes(description)
+            criteria: bytes(criteria),
+            assertTreshold: disputeTreshold,
+            valueTreshold: uint256(0)
         });
-        if (reward > 0) currency.safeTransferFrom(msg.sender, address(this), reward); // Pull reward.
+        if (reward > 0) currency.safeTransferFrom(msg.sender, address(this), reward); // Pull bond from creator.
 
-        emit MarketInitialized(
-            marketId,
+        emit contentInitialized(
+            contentId,
             outcome1,
             outcome2,
-            description,
+            criteria,
             address(outcome1Token),
             address(outcome2Token),
             reward,
-            requiredBond
+            requiredBond,
+            disputeTreshold
         );
     }
 
     // Assert the market with any of 3 possible outcomes: names of outcome1, outcome2 or unresolvable.
     // Only one concurrent assertion per market is allowed.
-    function assertMarket(bytes32 marketId, string memory assertedOutcome) public returns (bytes32 assertionId) {
-        Market storage market = markets[marketId];
-        require(market.outcome1Token != ExpandedIERC20(address(0)), "Market does not exist");
+    function assertContent(bytes32 contentId, string memory assertedOutcome) public returns (bytes32 assertionId) {
+        Content storage content = contents[contentId];
+        require(content.outcome1Token != ExpandedIERC20(address(0)), "Content does not exist");
         bytes32 assertedOutcomeId = keccak256(bytes(assertedOutcome));
-        require(market.assertedOutcomeId == bytes32(0), "Assertion active or resolved");
+        require(content.assertedOutcomeId == bytes32(0), "Assertion active or resolved");
         require(
-            assertedOutcomeId == keccak256(market.outcome1) ||
-                assertedOutcomeId == keccak256(market.outcome2) ||
+            assertedOutcomeId == keccak256(content.outcome1) ||
+                assertedOutcomeId == keccak256(content.outcome2) ||
                 assertedOutcomeId == keccak256(unresolvable),
             "Invalid asserted outcome"
         );
+        // Increase Counter for Treshold if asserted as OutCome1, Outcome1 is default for Negation of  
+        // what criteria is being proposed
+        if(assertedOutcomeId  == keccak256(content.outcome1)){
+            content.valueTreshold = content.valueTreshold + 1;
+        }
 
-        market.assertedOutcomeId = assertedOutcomeId;
+        content.assertedOutcomeId = assertedOutcomeId;
         uint256 minimumBond = oo.getMinimumBond(address(currency)); // OOv3 might require higher bond.
-        uint256 bond = market.requiredBond > minimumBond ? market.requiredBond : minimumBond;
-        bytes memory claim = _composeClaim(assertedOutcome, market.description);
+        uint256 bond = content.requiredBond > minimumBond ? content.requiredBond : minimumBond;
+        bytes memory claim = _composeClaim(assertedOutcome, content.criteria);
 
         // Pull bond and make the assertion.
         currency.safeTransferFrom(msg.sender, address(this), bond);
         currency.safeApprove(address(oo), bond);
         assertionId = _assertTruthWithDefaults(claim, bond);
 
-        // Store the asserter and marketId for the assertionResolvedCallback.
-        assertedMarkets[assertionId] = AssertedMarket({ asserter: msg.sender, marketId: marketId });
+        // Store the asserter and contentId for the assertionResolvedCallback.
+        asserts[assertionId] = assertedContent({ asserter: msg.sender, contentId: contentId });
 
-        emit MarketAsserted(marketId, assertedOutcome, assertionId);
+        emit contentAsserted(contentId, assertedOutcome, assertionId);
     }
 
     // Callback from settled assertion.
@@ -167,14 +177,14 @@ contract UMASubjectiveSDK is OptimisticOracleV3CallbackRecipientInterface {
     // Otherwise, assertedOutcomeId is reset and the market can be asserted again.
     function assertionResolvedCallback(bytes32 assertionId, bool assertedTruthfully) public {
         require(msg.sender == address(oo), "Not authorized");
-        Market storage market = markets[assertedMarkets[assertionId].marketId];
+        Content storage content = contents[asserts[assertionId].contentId];
 
         if (assertedTruthfully) {
-            market.resolved = true;
-            if (market.reward > 0) currency.safeTransfer(assertedMarkets[assertionId].asserter, market.reward);
-            emit MarketResolved(assertedMarkets[assertionId].marketId);
-        } else market.assertedOutcomeId = bytes32(0);
-        delete assertedMarkets[assertionId];
+            content.resolved = true;
+            if (content.reward > 0) currency.safeTransfer(asserts[assertionId].asserter, content.reward);
+            emit contentResolved(asserts[assertionId].contentId);
+        } else content.assertedOutcomeId = bytes32(0);
+        delete asserts[assertionId];
     }
 
     // Dispute callback does nothing.
@@ -183,7 +193,7 @@ contract UMASubjectiveSDK is OptimisticOracleV3CallbackRecipientInterface {
     // Mints pair of tokens representing the value of outcome1 and outcome2. Trading of outcome tokens is outside of the
     // scope of this contract. The caller must approve this contract to spend the currency tokens.
     function createOutcomeTokens(bytes32 marketId, uint256 tokensToCreate) public {
-        Market storage market = markets[marketId];
+        Content storage market = contents[marketId];
         require(market.outcome1Token != ExpandedIERC20(address(0)), "Market does not exist");
 
         currency.safeTransferFrom(msg.sender, address(this), tokensToCreate);
@@ -195,16 +205,16 @@ contract UMASubjectiveSDK is OptimisticOracleV3CallbackRecipientInterface {
     }
 
     // Burns equal amount of outcome1 and outcome2 tokens returning settlement currency tokens.
-    function redeemOutcomeTokens(bytes32 marketId, uint256 tokensToRedeem) public {
-        Market storage market = markets[marketId];
-        require(market.outcome1Token != ExpandedIERC20(address(0)), "Market does not exist");
+    function redeemOutcomeTokens(bytes32 contentId, uint256 tokensToRedeem) public {
+        Content storage content = contents[contentId];
+        require(content.outcome1Token != ExpandedIERC20(address(0)), "Content does not exist");
 
-        market.outcome1Token.burnFrom(msg.sender, tokensToRedeem);
-        market.outcome2Token.burnFrom(msg.sender, tokensToRedeem);
+        content.outcome1Token.burnFrom(msg.sender, tokensToRedeem);
+        content.outcome2Token.burnFrom(msg.sender, tokensToRedeem);
 
         currency.safeTransfer(msg.sender, tokensToRedeem);
 
-        emit TokensRedeemed(marketId, msg.sender, tokensToRedeem);
+        emit TokensRedeemed(contentId, msg.sender, tokensToRedeem);
     }
 
     // If the market is resolved, then all of caller's outcome tokens are burned and currency payout is made depending
@@ -213,22 +223,22 @@ contract UMASubjectiveSDK is OptimisticOracleV3CallbackRecipientInterface {
     // resolved to the second outcome, then the payout equals balance of outcome2Token while outcome1Token provides
     // nothing. If the market was resolved to the split outcome, then both outcome tokens provides half of their balance
     // as currency payout.
-    function settleOutcomeTokens(bytes32 marketId) public returns (uint256 payout) {
-        Market storage market = markets[marketId];
-        require(market.resolved, "Market not resolved");
+    function settleOutcomeTokens(bytes32 contentId) public returns (uint256 payout) {
+        Content storage content = contents[contentId];
+        require(content.resolved, "Content not resolved");
 
-        uint256 outcome1Balance = market.outcome1Token.balanceOf(msg.sender);
-        uint256 outcome2Balance = market.outcome2Token.balanceOf(msg.sender);
+        uint256 outcome1Balance = content.outcome1Token.balanceOf(msg.sender);
+        uint256 outcome2Balance = content.outcome2Token.balanceOf(msg.sender);
 
-        if (market.assertedOutcomeId == keccak256(market.outcome1)) payout = outcome1Balance;
-        else if (market.assertedOutcomeId == keccak256(market.outcome2)) payout = outcome2Balance;
+        if (content.assertedOutcomeId == keccak256(content.outcome1)) payout = outcome1Balance;
+        else if (content.assertedOutcomeId == keccak256(content.outcome2)) payout = outcome2Balance;
         else payout = (outcome1Balance + outcome2Balance) / 2;
 
-        market.outcome1Token.burnFrom(msg.sender, outcome1Balance);
-        market.outcome2Token.burnFrom(msg.sender, outcome2Balance);
+        content.outcome1Token.burnFrom(msg.sender, outcome1Balance);
+        content.outcome2Token.burnFrom(msg.sender, outcome2Balance);
         currency.safeTransfer(msg.sender, payout);
 
-        emit TokensSettled(marketId, msg.sender, payout, outcome1Balance, outcome2Balance);
+        emit TokensSettled(contentId, msg.sender, payout, outcome1Balance, outcome2Balance);
     }
 
     function _getCollateralWhitelist() internal view returns (AddressWhitelist) {
