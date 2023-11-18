@@ -64,11 +64,29 @@ function assertContent(bytes32 contentId, string memory assertedOutcome) public 
 
 
 ### What does assertionResolvedCallback do? 
-It checks if the 
+It checks if the assertion in in tune with the criteria and if that is case then it awards the
+people who voted according to the same criteria. 
 
+```
+ function assertionResolvedCallback(bytes32 assertionId, bool assertedTruthfully) public {
+        require(msg.sender == address(oo), "Not authorized");
+        Content storage content = contents[asserts[assertionId].contentId];
 
-### How to fork and deploy
-
+        if (assertedTruthfully) {
+            content.resolved = true;
+            if (content.reward > 0) {
+                 uint256 rewardPerRecipient = content.reward / content.token1yes.length;
+                 require(rewardPerRecipient > 0, "Reward too small to distribute");
+                 // Transfer the reward to each recipient
+                 for (uint256 i = 0; i < content.token1yes.length; i++) {
+                    currency.safeTransfer(content.token1yes[i], rewardPerRecipient);
+                    }
+                }
+            emit contentResolved(asserts[assertionId].contentId);
+        } else content.assertedOutcomeId = bytes32(0);
+        delete asserts[assertionId];
+    }
+```
 
 ### Transaction Hash (Mumbai Testnet)
 Waiting for receipts.
