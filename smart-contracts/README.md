@@ -1,3 +1,6 @@
+### Deployed Contract Address
+https://mumbai.polygonscan.com/address/0x99bda3309830ddC444D8Fc82423675b0613a446F#writeContract
+
 ### What does initializeContent do?
 
 Initalize Content is to be called by content creator (poster of the content), these are the values it takes. 
@@ -86,6 +89,26 @@ people who voted according to the same criteria.
         } else content.assertedOutcomeId = bytes32(0);
         delete asserts[assertionId];
     }
+```
+
+### How do I deploy contracts? 
+```
+forge script \
+--broadcast \
+--fork-url  \
+--private-key "" \
+--verify \
+script/OracleSandbox.s.sol
+``` 
+
+```
+forge create --rpc-url   \
+--private-key "" \
+ src/UMASubjectiveDK.sol:UMASubjectiveSDK --constructor-args 
+```
+
+```
+ forge verify-contract --chain-id 80001 --etherscan-api-key  UMASubjectiveSDK --compiler-version 0.8.16 --constructor-args-path constructor-args.txt --watch
 ```
 
 ### Transaction Hash (Mumbai Testnet)
