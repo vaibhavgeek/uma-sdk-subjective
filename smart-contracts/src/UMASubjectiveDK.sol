@@ -78,7 +78,7 @@ contract UMASubjectiveSDK is OptimisticOracleV3CallbackRecipientInterface {
         address _optimisticOracleV3
     ) {
         finder = FinderInterface(_finder);
-        require(_getCollateralWhitelist().isOnWhitelist(_currency), "Unsupported currency");
+        //require(_getCollateralWhitelist().isOnWhitelist(_currency), "Unsupported currency");
         currency = IERC20(_currency);
         oo = OptimisticOracleV3Interface(_optimisticOracleV3);
         defaultIdentifier = oo.defaultIdentifier();
