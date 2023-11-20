@@ -194,7 +194,7 @@ contract UMASubjectiveSDK is OptimisticOracleV3CallbackRecipientInterface {
                  require(rewardPerRecipient > 0, "Reward too small to distribute");
                  // Transfer the reward to each recipient
                  for (uint256 i = 0; i < content.token1yes.length; i++) {
-                    currency.safeTransfer(content.token1yes[i], rewardPerRecipient);
+                    currency.safeTransfer(content.token1yes[i],     );
                     }
                 }
             emit contentResolved(asserts[assertionId].contentId);
